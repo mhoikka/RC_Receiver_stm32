@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP RJF0408JPD-01#J3
+D The RJF0408JPD is an N channel MOSFET for body lighting heater, power train, and 24V applications. It has built-in overheat protection functions and can function as a thermal FET.
+K
+F https://www.renesas.com/us/en/products/automotive-products/automotive-power-devices/automotive-thermal-shut-down-functioned-mosfets/rjf0408jpd-silicon-n-channel-mosfet-series-power-switching
+$ENDCMP
+#
+#End Doc Library

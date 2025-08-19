@@ -1,0 +1,5 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "PVA1EEH31_2NV2")(type "KiCad")(uri "D:/RCAirplaneProject/RCtransmitter_stm32f0/KiCAD libraries/KiCADv6/2025-01-05_18-11-16.kicad_sym")(options "")(descr ""))
+  (lib (name "D6R90 F2 LFS")(type "KiCad")(uri "D:/RCAirplaneProject/RCtransmitter_stm32f0/KiCAD libraries/KiCADv6/2024-12-26_23-35-08.kicad_sym")(options "")(descr ""))
+)
