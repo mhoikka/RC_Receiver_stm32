@@ -42,13 +42,13 @@ uint8_t ACK = 1;
  * @param  usec: specifies the delay time length, in 1 microsecond.
  * @retval None
  */
-void __attribute__((optimize("O0"))) bme280_delay_microseconds(uint32_t usec, void *intf_ptr){
+void __attribute__((optimize("O0"))) delay_microseconds(uint32_t usec, void *intf_ptr){
   for(volatile uint32_t counter = 0; counter < usec; counter++){
     //do nothing NOP instructions
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
     __NOP();__NOP();__NOP();__NOP();__NOP();__NOP();
     __NOP();__NOP();__NOP();__NOP();__NOP();
-    //lol this is nearly perfect timing
+    // this is nearly perfect timing
   }
 }
 
@@ -195,7 +195,7 @@ void BME_Init(){
   bme280_initparam.intf_rslt = BME280_INTF_RET_SUCCESS; 
   bme280_initparam.read = BME280_I2C_bus_read;
   bme280_initparam.write = BME280_I2C_bus_write;
-  bme280_initparam.delay_us = bme280_delay_microseconds;
+  bme280_initparam.delay_us = delay_microseconds;
   bme280_init(&bme280_initparam);
 
   struct bme280_settings bme_settings;
@@ -207,6 +207,123 @@ void BME_Init(){
 
   bme280_set_sensor_settings(BME280_SEL_FILTER | BME280_SEL_OSR_HUM | BME280_SEL_OSR_PRESS | BME280_SEL_OSR_TEMP, &bme_settings, &bme280_initparam);
   bme280_set_sensor_mode(BME280_POWERMODE_NORMAL, &bme280_initparam);  
+}
+
+/**
+ * @brief enable the GPIO pins to control the H-bridge for the AC 3-phase motor voltage
+ * @retval None
+ */
+void HBridge_Peripherals_Init(){
+  // Enable pins to control NMOS H-Bridge
+  GPIO_InitTypeDef GPIO_InitStruct;
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_3 | GPIO_Pin_4;
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz; // High speed
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  GPIO_InitTypeDef GPIO_InitStruct2;
+  GPIO_InitStruct2.GPIO_Pin = GPIO_Pin_11;
+  GPIO_InitStruct2.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct2.GPIO_Speed = GPIO_Speed_50MHz; // High speed
+  GPIO_InitStruct2.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct2.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_Init(GPIOC, &GPIO_InitStruct2);
+
+  GPIO_InitTypeDef GPIO_InitStruct3;
+  GPIO_InitStruct3.GPIO_Pin = GPIO_Pin_2;
+  GPIO_InitStruct3.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct3.GPIO_Speed = GPIO_Speed_50MHz; // High speed
+  GPIO_InitStruct3.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct3.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_Init(GPIOD, &GPIO_InitStruct3);
+}
+
+/**
+ * * @brief Initializes all of the peripherals necessary to control the servo motors using the STM32 chip
+ * @retval None
+ */
+void Servo_Peripherals_Init(){
+
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE); // enable clocks for GPIO peripheral
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
+
+  // Enable pin to control LFlap
+  GPIO_InitTypeDef GPIO_InitStruct;
+  // Currently only the LFlap control pin C13 is set up here for testing
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_13;
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz; // High speed
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  // Enable pin to control test diode
+  GPIO_InitTypeDef GPIO_InitStruct2;
+  GPIO_InitStruct2.GPIO_Pin = GPIO_Pin_12;
+  GPIO_InitStruct2.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct2.GPIO_Speed = GPIO_Speed_50MHz; // High speed
+  GPIO_InitStruct2.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct2.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_Init(GPIOB, &GPIO_InitStruct2);
+}
+
+/**
+ * @brief Tests the servo motor, currently only set up for LFlap #TODO fix that TODO add support for changing angle of servo arm as well
+ * @param angle In range 0-4 inclusive and specifies the angle of the servo motor arm by the equation 45 * angle, with units of degrees
+ * Note that two of the servo motors used are different and don't need to exceed the specified PWM time spans to fire to the specified angle, as the SG90 do
+ */
+void DriveServoControl(uint8_t angle){ 
+  GPIO_SetBits(GPIOB, GPIO_Pin_12); // Turn on test diode to confirm setup function worked
+  uint32_t time_on = 0;
+  for(int i = 0; i < 6000; i++){ // TODO test how fast loaded arm moves, unloaded arm is rated to move at 0.09 s + 0.01 s/60 degrees at 4.8 V so I gave it 150 ms here
+    GPIO_SetBits(GPIOC, GPIO_Pin_13); // Servo uses PWM to control angle of arm
+    time_on = 800 + angle * 500; // in microseconds
+    delay_microseconds(time_on, NULL); // exceeds 1000 or 1500 ms (45-90 degree angle for servo arm) as specified to ensure motor operates
+    GPIO_ResetBits(GPIOC, GPIO_Pin_13);
+    delay_microseconds(20000 - time_on, NULL);
+  }
+  
+}
+
+/**
+ * @brief Repeatedly cycle the control signals for the H-bridge to control the AC voltage for the electric motor (square waves, three phase AC)
+ * @param Period The period of the on-off control signal cycle in microseconds
+ * @retval None
+ */
+void DriveACMotorVoltageController(uint32_t Period){
+
+  uint32_t halfPeriod = Period/2;
+  uint32_t thirdPeriod = Period/3;
+  uint32_t sixthPeriod = Period/6;
+  
+  while(TRUE){ // TODO test if there should be a time delay between S1 turning off and S2 turning on and vice versa (there should be a GPIO pin voltage rise and fall time of 125 ns max)
+    GPIO_SetBits(GPIOB, GPIO_Pin_6); // S1 on
+
+    delay_microseconds(sixthPeriod, NULL); // 1/6 period elapsed 
+    GPIO_ResetBits(GPIOD, GPIO_Pin_2); // S5 off
+    GPIO_SetBits(GPIOC, GPIO_Pin_11); // S6 on
+
+    delay_microseconds(thirdPeriod-sixthPeriod, NULL); // 1/3 period elapsed (delay timings are computed like this to avoid rounding errors from integer division truncations)
+    GPIO_ResetBits(GPIOB, GPIO_Pin_3); // S4 off
+    GPIO_SetBits(GPIOB, GPIO_Pin_4); // S3 on
+
+    delay_microseconds(halfPeriod - thirdPeriod, NULL); // 1/2 period elapsed
+    GPIO_ResetBits(GPIOB, GPIO_Pin_6); // S1 off
+    GPIO_SetBits(GPIOB, GPIO_Pin_5); // S2 on
+
+    delay_microseconds(2*thirdPeriod - halfPeriod, NULL); // 2/3 period elapsed
+    GPIO_ResetBits(GPIOC, GPIO_Pin_11); // S6 off
+    GPIO_SetBits(GPIOD, GPIO_Pin_2); // S5 on
+
+    delay_microseconds(sixthPeriod, NULL); // 5/6 period elapsed
+    GPIO_ResetBits(GPIOB, GPIO_Pin_4); // S3 off
+    GPIO_SetBits(GPIOB, GPIO_Pin_3); // S4 on
+    
+    delay_microseconds(Period-(sixthPeriod+2*thirdPeriod), NULL); // Full period elapsed
+    GPIO_ResetBits(GPIOB, GPIO_Pin_5); // S2 off
+  }
 }
 
 /**
@@ -445,7 +562,7 @@ void transmitBytesNRF(uint8_t * data, uint8_t data_len) {
 
     nrf24_write_TX_payload(data, ACK, data_len);            //write data to be transmitted into TX FIFO
     set_nrf24_SPI_CE(1);                  //enable chip to transmit data
-    bme280_delay_microseconds(130, NULL); //wait for chip to go into TX mode
+    delay_microseconds(130, NULL); //wait for chip to go into TX mode
     Delay(1);
     Delay(50);   // Not sure how long this delay needs to be
 
@@ -469,7 +586,7 @@ void transmit(void * data, uint8_t data_len, uint8_t data_size){
   uint8_t data_seg[32];
   //uint8_t data_send[32];
   nrf24_write_register(CONFIG, 0x0A);         //set to PTX mode and turn on power bit 0x0A
-  bme280_delay_microseconds(2*1000, NULL);  //wait for chip to go into Standby-I mode
+  delay_microseconds(2*1000, NULL);  //wait for chip to go into Standby-I mode
   while(data_len > 0){
     len_left = data_len > 32 ? 32 : (data_len*data_size)%32; 
     memcpy(&data_seg[0], &data[i], len_left); //mini array of length 32 for buffering transmitted data
