@@ -191,6 +191,7 @@
         0.2,
         0.3,
         0.5,
+        1.0,
         2.0
       ],
       "tuning_pattern_settings": {
@@ -226,7 +227,7 @@
         },
         {
           "diameter": 0.5,
-          "drill": 0.25
+          "drill": 0.27
         },
         {
           "diameter": 0.5,
@@ -524,7 +525,7 @@
       "gencad": "",
       "idf": "",
       "netlist": "",
-      "plot": "GERBER outputs/",
+      "plot": "C:/Users/mitch/Downloads/",
       "pos_files": "",
       "specctra_dsn": "",
       "step": "",

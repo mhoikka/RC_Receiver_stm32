@@ -12,4 +12,6 @@
   (lib (name "500SSP1S2M2QEA")(type "KiCad")(uri "E:/RCAirplaneProject/RC_Receiver_stm32/KiCAD libraries/500SSP1S2M2QEA.kicad_sym")(options "")(descr ""))
   (lib (name "FCR7350R")(type "KiCad")(uri "E:/RCAirplaneProject/RC_Receiver_stm32/KiCAD libraries/FCR7350R.kicad_sym")(options "")(descr ""))
   (lib (name "ANT13SECQE")(type "KiCad")(uri "E:/RCAirplaneProject/RC_Receiver_stm32/KiCAD libraries/KiCADv6/ANT13SECQE.kicad_sym")(options "")(descr ""))
+  (lib (name "ICM-20948")(type "KiCad")(uri "E:/RCAirplaneProject/RC_Receiver_stm32/KiCAD libraries/ICM-20948.kicad_sym")(options "")(descr ""))
+  (lib (name "MIC5365-1.8YC5-TR")(type "KiCad")(uri "E:/RCAirplaneProject/RC_Receiver_stm32/KiCAD libraries/MIC5365-1.8YC5-TR.kicad_sym")(options "")(descr ""))
 )
