@@ -60,7 +60,7 @@ int main(void)
 
 
   HBridge_Peripherals_Init();
-  DriveACMotorVoltageController(10000);
+  DriveACMotorVoltageController(4500);
   //I2C_Settings_Init();
   //UART_Settings_Init();
 

@@ -9,7 +9,7 @@
 
 typedef struct my_device_context {
     I2C_InitTypeDef *I2C_InitStruct; // Pointer to the I2C handle
-    uint16_t i2c_address;     // I2C address of the BME280
+    uint16_t i2c_address;     // I2C address of the device
 } my_device_context;
 struct my_device_context ctx = {};
 struct bme280_dev bme280_initparam;
@@ -214,6 +214,8 @@ void BME_Init(){
  * @retval None
  */
 void HBridge_Peripherals_Init(){
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOD, ENABLE); // TODO collect all clock enables at start of program
+
   // Enable pins to control NMOS H-Bridge
   GPIO_InitTypeDef GPIO_InitStruct;
   GPIO_InitStruct.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_6 | GPIO_Pin_3 | GPIO_Pin_4;
@@ -249,9 +251,8 @@ void Servo_Peripherals_Init(){
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE); // enable clocks for GPIO peripheral
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
 
-  // Enable pin to control LFlap
+  // Enable pins to control servos
   GPIO_InitTypeDef GPIO_InitStruct;
-  // Currently only the LFlap control pin C13 is set up here for testing
   GPIO_InitStruct.GPIO_Pin = GPIO_Pin_13;
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz; // High speed
@@ -259,9 +260,16 @@ void Servo_Peripherals_Init(){
   GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_DOWN;
   GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  // Enable pin to control test diode
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_7;
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_OUT;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz; // High speed
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_DOWN;
+  GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+  // Enable pin to control test diode and remaining servos
   GPIO_InitTypeDef GPIO_InitStruct2;
-  GPIO_InitStruct2.GPIO_Pin = GPIO_Pin_12;
+  GPIO_InitStruct2.GPIO_Pin = GPIO_Pin_12|GPIO_Pin_11|GPIO_Pin_10|GPIO_Pin_2; // Diode pin and L-R elevator control pins
   GPIO_InitStruct2.GPIO_Mode = GPIO_Mode_OUT;
   GPIO_InitStruct2.GPIO_Speed = GPIO_Speed_50MHz; // High speed
   GPIO_InitStruct2.GPIO_OType = GPIO_OType_PP;
@@ -270,21 +278,78 @@ void Servo_Peripherals_Init(){
 }
 
 /**
- * @brief Tests the servo motor, currently only set up for LFlap #TODO fix that TODO add support for changing angle of servo arm as well
+ * @brief Tests the servo motor, TODO add support for changing angle of servo arm as well
  * @param angle In range 0-4 inclusive and specifies the angle of the servo motor arm by the equation 45 * angle, with units of degrees
  * Note that two of the servo motors used are different and don't need to exceed the specified PWM time spans to fire to the specified angle, as the SG90 do
  */
-void DriveServoControl(uint8_t angle){ 
+void DriveServoControl(uint8_t angle){ // For testing purposes only, moves all servos to same angle and resets them to 0 degrees after 2 seconds
   GPIO_SetBits(GPIOB, GPIO_Pin_12); // Turn on test diode to confirm setup function worked
   uint32_t time_on = 0;
-  for(int i = 0; i < 6000; i++){ // TODO test how fast loaded arm moves, unloaded arm is rated to move at 0.09 s + 0.01 s/60 degrees at 4.8 V so I gave it 150 ms here
-    GPIO_SetBits(GPIOC, GPIO_Pin_13); // Servo uses PWM to control angle of arm
+  for(int i = 0; i < 100; i++){ // TODO test how fast loaded arm moves, unloaded arm is rated to move at 0.09 s + 0.01 s/60 degrees at 4.8 V so I gave it 150 ms here
+    GPIO_SetBits(GPIOC, GPIO_Pin_13); // LFlap // Servo uses PWM to control angle of arm
+    GPIO_SetBits(GPIOF, GPIO_Pin_7); // Rflap
+    GPIO_SetBits(GPIOB, GPIO_Pin_2); // Lelevator
+    GPIO_SetBits(GPIOB, GPIO_Pin_11); // Relevator
+    GPIO_SetBits(GPIOB, GPIO_Pin_10); // Rudder
+    
     time_on = 800 + angle * 500; // in microseconds
     delay_microseconds(time_on, NULL); // exceeds 1000 or 1500 ms (45-90 degree angle for servo arm) as specified to ensure motor operates
-    GPIO_ResetBits(GPIOC, GPIO_Pin_13);
+    GPIO_ResetBits(GPIOC, GPIO_Pin_13); // LFlap 
+    GPIO_ResetBits(GPIOF, GPIO_Pin_7); // Rflap
+    GPIO_ResetBits(GPIOB, GPIO_Pin_2); // Lelevator
+    GPIO_ResetBits(GPIOB, GPIO_Pin_11); // Relevator
+    GPIO_ResetBits(GPIOB, GPIO_Pin_10); // Rudder
     delay_microseconds(20000 - time_on, NULL);
-  }
-  
+  }  
+  for(int i = 0; i < 100; i++){ // TODO test how fast loaded arm moves, unloaded arm is rated to move at 0.09 s + 0.01 s/60 degrees at 4.8 V so I gave it 150 ms here
+    GPIO_SetBits(GPIOC, GPIO_Pin_13); // LFlap // Servo uses PWM to control angle of arm
+    GPIO_SetBits(GPIOF, GPIO_Pin_7); // Rflap
+    GPIO_SetBits(GPIOB, GPIO_Pin_2); // Lelevator
+    GPIO_SetBits(GPIOB, GPIO_Pin_11); // Relevator
+    GPIO_SetBits(GPIOB, GPIO_Pin_10); // Rudder
+    
+    time_on = 800 + 0 * 500; // in microseconds
+    delay_microseconds(time_on, NULL); // exceeds 1000 or 1500 ms (45-90 degree angle for servo arm) as specified to ensure motor operates
+    GPIO_ResetBits(GPIOC, GPIO_Pin_13); // LFlap 
+    GPIO_ResetBits(GPIOF, GPIO_Pin_7); // Rflap
+    GPIO_ResetBits(GPIOB, GPIO_Pin_2); // Lelevator
+    GPIO_ResetBits(GPIOB, GPIO_Pin_11); // Relevator
+    GPIO_ResetBits(GPIOB, GPIO_Pin_10); // Rudder
+    delay_microseconds(20000 - time_on, NULL);
+  } 
+}
+
+/**
+ * @brief Enables the ADC for the battery voltage measurement pin
+ * @param None
+ * @retval None
+ */
+void enableADC_batteryvoltagesense(){
+  GPIO_InitTypeDef GPIO_InitStruct;
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE); // enable clocks for GPIO peripheral 
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE); // enable clocks for ADC peripheral
+  // Configure PC0 as analog input for battery voltage measurement
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
+  GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AN;
+  GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStruct.GPIO_OType = GPIO_OType_PP; // TODO check these settings
+  GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOC, &GPIO_InitStruct);
+}
+
+
+
+/**
+ * @brief Converts ADC measurement to voltage value of battery taking the voltage divider into account
+ * @param ADC_12bit 12 bit measurement from ADC in unsigned integer format, in a 16 bit integer package padded with 0s on the MSB side
+ * @retval Battery voltage
+ */
+float batteryVoltageMeasurement(uint16_t ADC_12bit){
+  float Rtop = 300000;
+  float Rbottom = 100000;
+  float battery_voltage;
+  battery_voltage = ADC_12bit * 3.3 * (Rbottom + Rtop) / (Rbottom * 0xFFF); // TODO document this equation
+  return battery_voltage;
 }
 
 /**
@@ -337,28 +402,28 @@ void I2C_Settings_Init(){
   //RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);//
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
   
-  // Use pins PB6 and PB7 for I2C (STM32F030R8)
-  GPIO_InitTypeDef GPIO_InitStruct; 
-  GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_1);
-  GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_1); 
-  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+  // Use pins PF0 and PF1 for I2C (STM32F030R8T6)
+  GPIO_InitTypeDef GPIO_InitStruct;
+  GPIO_PinAFConfig(GPIOF, GPIO_PinSource0, GPIO_AF_1);
+  GPIO_PinAFConfig(GPIOF, GPIO_PinSource1, GPIO_AF_1);
+  GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
   GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
   GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz; 
   GPIO_InitStruct.GPIO_OType = GPIO_OType_OD;
   GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(GPIOB, &GPIO_InitStruct);
+  GPIO_Init(GPIOF, &GPIO_InitStruct);
 	
   // I2C configuration
   I2C_InitTypeDef I2C_InitStruct;
   I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
   I2C_InitStruct.I2C_AnalogFilter = I2C_AnalogFilter_Enable;
   I2C_InitStruct.I2C_DigitalFilter = 0x00;
-  I2C_InitStruct.I2C_Timing = 0x00901D23; 
+  I2C_InitStruct.I2C_Timing = 0x00901D23; // TODO recheck these values if I2C issues occur
   I2C_Init(I2C1, &I2C_InitStruct);
   I2C_Cmd(I2C1, ENABLE);
 
   ctx.I2C_InitStruct = &I2C_InitStruct;
-  ctx.i2c_address = BME280_I2C_ADDR_SEC; // Set the secondary I2C address
+  ctx.i2c_address = 0x68; // Set the I2C address for gyroscope with grounded AD0 pin
 }
 
 uint8_t* nrf24_read_register(uint8_t reg) {

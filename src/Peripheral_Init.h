@@ -24,6 +24,8 @@ void MySPI_Init();
 void HBridge_Peripherals_Init();
 void Servo_Peripherals_Init();
 void DriveServoControl(uint8_t angle);
+void enableADC_batteryvoltagesense();
+float batteryVoltageMeasurement(uint16_t ADC_12bit);
 void DriveACMotorVoltageController(uint32_t Period);
 void NRF24L01p_Init();
 void I2C_Settings_Init();
