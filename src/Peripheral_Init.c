@@ -250,6 +250,7 @@ void Servo_Peripherals_Init(){
 
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE); // enable clocks for GPIO peripheral
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOF, ENABLE);
 
   // Enable pins to control servos
   GPIO_InitTypeDef GPIO_InitStruct;
